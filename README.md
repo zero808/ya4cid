@@ -7,7 +7,7 @@ You will need to install the following dependencies:
 https://github.com/g-gundam/yotsubAPI
 
 ### Usage
-Pass the board and the thread number as arguments:
+Pass the board and the thread number as arguments:   
 ./ya4cid.rkt g 12345   
 racket ya4cid.rkt sp 67890
 
