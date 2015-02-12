@@ -1,38 +1,47 @@
 #!/usr/bin/env racket
 #lang racket/base
+(require json racket/port net/url yotsubAPI)
 
-(require json yotsubAPI)
-;4chan-data
-;4chan-data-page
-;4chan-data-catalog
-;4chan-data-thread
-(define catalog (4chan-data-catalog "g"))
-(define lispg (4chan-catalog-find-lisp-general catalog))
-;get a thread
-;try to iterate over the posts
-;try to look up for the trim atribute or whatever it's called and get the filename
-;create a folder
-;download every image into that folder
+;Default paths
+(define 4chan-folder (build-path (find-system-path 'home-dir) "4chan"))
 
+(define image-url-prefix "http://i.4cdn.org/g/")
 
-
-;on the main function
-;read the input which should be
-;./ya4cid.rkt [<board> <thread>]+
-;(for ([posts keys (in-hash b)])
+;make sure the folder exists
+(define (create-4chan-dir)
+  (cond ((not (directory-exists? 4chan-folder))
+         (make-directory 4chan-folder))))
 
 (define (get-filenames ht)
+  ;TODO get some options to filter undesirable extensions, e.g., download only webm files
   (for/list ([post (hash-ref ht 'posts)]
              #:when (hash-has-key? post 'tim)) ;list of HTs, each post is an ht
             (format "~a~a" (hash-ref post 'tim) (hash-ref post 'ext))))
 
-;we might make two different functions one for unix and another for windows
+;downloads the image
+(define (download urlstr)
+  (port->bytes (get-pure-port (string->url urlstr))))
+
+;saves the image to a file
+(define (save-image url path file-name)
+  (call-with-output-file (build-path path file-name)
+                         ;the truncate is irrelevant since there shouldn't be any file in the directory
+                         (lambda (out) (write-bytes (download url) out)) #:exists 'truncate))
+
 (define (download-images-from-thread board id)
-  ;1st create a file for the thread under, for e.g., ~/4chan/<board>/<id>/
-  ;see http://docs.racket-lang.org/reference/Filesystem.html
-  ;2nd either
-  ;     a) make sure we 'cd' to that directory
-  ;     b) pass the destination path to wget in step 3
-  ;3rd start downloading them creating a process using wget
-  ;if we decide to use threads check (split-at lst pos) so we can divide them among threads
-  )
+  (let ([thread (4chan-data-thread board (string->number id))] ;get the thread's data
+        [board-path (build-path 4chan-folder board)]
+        [new-thread-path (build-path 4chan-folder board id)])
+    (cond ((not (directory-exists? board-path))
+           (make-directory board-path))
+          ((not (directory-exists? new-thread-path))
+           (make-directory new-thread-path)))
+    (map (lambda (file-name) (save-image (string-append image-url-prefix file-name) new-thread-path file-name))
+         (get-filenames thread))
+    (displayln (format "Files saved in ~a" (path->string new-thread-path)))))
+
+(create-4chan-dir)
+;TODO cycle for all the pairs of <board thread>
+(let ([arguments (current-command-line-arguments)])
+  (download-images-from-thread (vector-ref arguments 0) (vector-ref arguments 1)))
+
