@@ -5,7 +5,7 @@
 ;Default paths
 (define current-4chan-folder (make-parameter (build-path (find-system-path 'home-dir) "4chan")))
 
-(define image-url-prefix "http://i.4cdn.org/g/")
+(define image-url-prefix "http://i.4cdn.org/")
 
 (define (create-dir-unless-exists dir)
   (unless (directory-exists? dir)
@@ -34,7 +34,7 @@
   (create-dir-unless-exists board-path)
   (create-dir-unless-exists new-thread-path)
   (for-each (lambda (file-name)
-              (save-image (string-append image-url-prefix file-name) new-thread-path file-name))
+              (save-image (string-append image-url-prefix board "/" file-name) new-thread-path file-name))
             (get-filenames thread))
   (printf "Files saved in ~a~%" (path->string new-thread-path)))
 
